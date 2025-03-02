@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "cross-env NODE_ENV=prod node dist/index.js",
-    "start:dev": "cross-env NODE_ENV=dev DEBUG=films* node --watch --env-file=.env ./dist/index.js",
+    "start:dev": "cross-env NODE_ENV=dev DEBUG=world* node --watch --env-file=.env ./dist/index.js",
     "build": "tsc -w",
     "lint": "eslint . --ext .ts"
   },
