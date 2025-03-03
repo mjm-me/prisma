@@ -1,7 +1,21 @@
 import { $Enums, PrismaClient, Prisma } from '@prisma/client';
 
 console.log('Hello, world!');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient().$extends({
+  result: {
+    country: {
+      density: {
+        needs: {
+          population: true,
+          surfaceArea: true,
+        },
+        compute(item) {
+          return item.population / item.surfaceArea.toNumber();
+        },
+      },
+    },
+  },
+});
 
 export const getCountries = async () => {
   const countries = await prisma.country.findMany();
@@ -74,126 +88,191 @@ export const getCitiesWithPopulationGreaterThan = async (limit: number) => {
   console.log(cities);
 };
 
-// await getCountries();
-// await getCountriesByContinents('Europe');
+export const getCountriesWithDensityByContinent = async (
+  continent: $Enums.CountryContinent,
+) => {
+  const countries = await prisma.country.findMany({
+    where: {
+      continent,
+    },
+    select: {
+      name: true,
+      population: true,
+      surfaceArea: true,
+      density: true,
+    },
+  });
 
-// await getCitiesByCountryCode('ESP');
-//await getCitiesFromContinentWithCountryName('Europe');
-//getCitiesWithPopulationGreaterThan(9_000_000);
-
-// EXERCISE 1 -- Listar todos los países con su población y su extensión, incluyendo los correspondientes alias adecuados en español
-export const getCountriesWithPopulationAndExtension = async () => {
-  try {
-    // Consultar países con población y extensión
-    const countries = await prisma.country.findMany({
-      select: {
-        name: true, // Nombre del país
-        population: true, // Población
-        surfaceArea: true, // Superficie
-      },
-    });
-
-    // Transformar los resultados con alias en español
-    const result = countries.map((country) => ({
-      Nombre: country.name,
-      Población: country.population,
-      Superficie: country.surfaceArea,
-    }));
-
-    console.log(result);
-    return result; // Devolver los resultados si se necesitan en otro lugar
-  } catch (error) {
-    console.error('Error al obtener los países:', error);
-    throw error; // Propagar el error si es necesario manejarlo más adelante
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(countries);
+  // console.log(
+  //     countries.map((country) => {
+  //         const density = country.population / country.surfaceArea.toNumber();
+  //         return {
+  //             ...country,
+  //             density,
+  //         };
+  //     }),
+  // );
 };
 
-//await getCountriesWithPopulationAndExtension();
-
-//EXERCISE 2 -- Añadir un elemento calculado: la densidad
-export const getCountriesWithDensity = async () => {
-  try {
-    // Consulta países con población y superficie
-    const countries = await prisma.country.findMany({
-      select: {
-        name: true, // Nombre del país
-        population: true, // Población
-        surfaceArea: true, // Superficie
+export const getCitiesPoliticsWithPopulationGreaterThan = async (
+  limit: number,
+  continent: $Enums.CountryContinent,
+) => {
+  const cities = await prisma.city.findMany({
+    select: {
+      name: true,
+      country: {
+        select: {
+          name: true,
+          governmentForm: true,
+        },
       },
-    });
+    },
+    where: {
+      population: {
+        gt: limit,
+      },
+      country: {
+        continent,
+      },
+    },
+  });
 
-    // Calcular la densidad para cada país
-    const result = countries.map((country) => ({
-      Country: country.name,
-      Population: country.population,
-      Surface: country.surfaceArea,
-      Density: country.population / country.surfaceArea || 0, // Evitar división por 0
-    }));
-
-    console.log(result);
-    return result; // Devuelve los resultados con densidad incluida
-  } catch (error) {
-    console.error('Error al calcular la densidad:', error);
-    throw error; // Propagar el error si es necesario
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(cities);
 };
-//await getCountriesWithDensity();
 
-//EXERCISE 3 -- Listar los 10 primeros países
-export const getTop10Countries = async () => {
-  try {
-    // Consultar los 10 primeros países
-    const countries = await prisma.country.findMany({
-      take: 10, // Limitar a los primeros 10 países
-      orderBy: {
-        name: 'asc', // Orden alfabético ascendente
+export const getCitiesPoliticsLanguageWithPopulationGreaterThan = async (
+  limit: number,
+  continent: $Enums.CountryContinent,
+) => {
+  const cities = await prisma.city.findMany({
+    select: {
+      name: true,
+      country: {
+        select: {
+          name: true,
+          governmentForm: true,
+          countryLanguage: {
+            select: {
+              language: true,
+              isOfficial: true,
+            },
+            where: {
+              isOfficial: 'T',
+            },
+          },
+        },
       },
-      select: {
-        name: true, // Nombre del país
-        population: true, // Población
-        surfaceArea: true, // Superficie
+    },
+    where: {
+      population: {
+        gt: limit,
       },
-    });
+      country: {
+        continent,
+      },
+    },
+  });
 
-    console.log(countries); // Mostrar los resultados en consola
-    return countries; // Devolver los datos si los necesitas en otra parte
-  } catch (error) {
-    console.error('Error al obtener los países:', error);
-    throw error; // Manejar errores si es necesario
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(cities);
+  console.log(JSON.stringify(cities));
 };
-//await getTop10Countries();
 
-//EXERCISE 4 -- Listar los países entre el 10 y el 20
-export const getCountriesFrom10To20 = async () => {
-  try {
-    // Consultar los países del 10 al 20
-    const countries = await prisma.country.findMany({
-      skip: 10, // Saltar los primeros 10 países
-      take: 10, // Obtener los siguientes 10 países
-      orderBy: {
-        name: 'asc', // Ordenar alfabéticamente (puedes cambiar esto si es necesario)
-      },
-      select: {
-        name: true, // Nombre del país
-        population: true, // Población
-        surfaceArea: true, // Superficie
-      },
-    });
+export const getWorldSurfacePopulation = async () => {
+  // const world = await prisma.country.findMany({
+  //     select: {
+  //         surfaceArea: true,
+  //         population: true,
+  //     },
+  // });
+  // console.log(
+  //     world.reduce((acc, country) => {
+  //         return {
+  //             surfaceArea: Prisma.Decimal.add(
+  //                 acc.surfaceArea,
+  //                 country.surfaceArea,
+  //             ),
+  //             population: acc.population + country.population,
+  //         };
+  //     }),
+  // );
 
-    console.log(countries); // Mostrar los resultados en consola
-    return countries; // Devolver los resultados si son necesarios en otro lugar
-  } catch (error) {
-    console.error('Error al obtener los países:', error);
-    throw error; // Manejar errores si es necesario
-  } finally {
-    await prisma.$disconnect();
-  }
+  const aggregations = await prisma.country.aggregate({
+    _sum: {
+      population: true,
+      surfaceArea: true,
+    },
+    _avg: {
+      population: true,
+      surfaceArea: true,
+    },
+  });
+  console.log(aggregations);
 };
-//await getCountriesFrom10To20();
+
+export const getContinentsSurfaceAndPopulation = async () => {
+  // const world = await prisma.country.findMany({
+  //     select: {
+  //         surfaceArea: true,
+  //         population: true,
+  //     },
+  // });
+  // console.log(
+  //     Object.groupBy(world, (country) => country.continent).map(
+  //         (continent) => {
+  //             return {
+  //                 continent: continent.key,
+  //                 surfaceArea: continent.values.reduce(
+  //                     (acc, country) => acc + country.surfaceArea.toNumber(),
+  //                     0,
+  //                 ),
+  //                 population: continent.values.reduce(
+  //                     (acc, country) => acc + country.population,
+  //                     0,
+  //                 ),
+  //             };
+  // );
+
+  const groupUsers = await prisma.country.groupBy({
+    by: ['continent'],
+    _sum: {
+      population: true,
+      surfaceArea: true,
+    },
+    _avg: {
+      population: true,
+      surfaceArea: true,
+    },
+  });
+  console.log(groupUsers);
+};
+
+// getCountries();
+// getCountriesByContinents('Europe');
+
+// getCitiesByCountryCode('ESP');
+// getCitiesFromContinentWithCountryName('Europe');
+
+// getCitiesWithPopulationGreaterThan(9_000_000);
+
+// Listado de países de un continente con su nombre, población extensión y densidad
+
+// getCountriesWithDensityByContinent('Europe');
+
+// Nombre de la ciudad, país y su forma de gobierno
+// de las ciudades de más de x habitantes de z continente
+
+// getCitiesPoliticsWithPopulationGreaterThan(3_000_000, 'Europe');
+
+// Añadimos al anterior las lenguas oficiales del país
+
+// getCitiesPoliticsLanguageWithPopulationGreaterThan(3_000_000, 'Europe');
+
+// Cual es la superficie y población total del mundo
+
+// getWorldSurfacePopulation();
+
+// Cual es la superficie y la población de cada continente
+
+getContinentsSurfaceAndPopulation();
